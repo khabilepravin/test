@@ -23,7 +23,6 @@ public class MoviesController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<List<Movie>>> GetMovies()
     {
-        
             try
             {
                 var movies = await _sender.Send(new GetMoviesQuery());
@@ -37,24 +36,68 @@ public class MoviesController : ControllerBase
             }
     }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutMovie(int id, Movie movie)
+    [HttpPut("{id}")]
+    public async Task<IActionResult> PutMovie(int id, [FromBody] Movie movie)
+    {
+        try
         {
-             // TODO:: ADD PUT LOGIC
+            if (movie == null || id != movie.Id)
+            {
+                return BadRequest("Movie data is invalid.");
+            }
+
+            var updateMovieCommand = new UpdateMovieCommand
+            {
+                Id = id,
+                Title = movie.Title,
+                Director = movie.Director,
+                Year = movie.Year
+            };
+            var success = await _sender.Send(updateMovieCommand);
+            if (!success)
+            {
+                return NotFound();
+            }
+
+            _logger.LogInformation("movie updated successfully");
             return NoContent();
+      
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred while updating the movie.");
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+
+
+
+    [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteMovie([FromRoute] int id)
+        {
+        try
+        {
+            var result = await _sender.Send(new DeleteMoviebyIdCommand { Id = id });
+            if (!result)
+            {
+                _logger.LogWarning("Movie not found.");
+                return NotFound("Movie not found.");
+            }
+            return Ok("Movie Deleted Successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred while retrieving the movie with ID {MovieId}.", id);
+            return StatusCode(500, "Internal server error");
         }
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteMovie(int id)
-        {
-        // TODO:: ADD DELETE LOGIC
-        return NoContent();
-        }
+    }
 
 
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Movie>> GetMovieById(int id)
+        public async Task<ActionResult<Movie>> GetMovieById([FromRoute] int id)
         {
             try
             {
